@@ -32,7 +32,14 @@ def check(name: str, status: str, detail: str = "") -> None:
 
 
 def _sha(path: pathlib.Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    """Hash JSONL contents independently of Git's CRLF/LF checkout setting.
+
+    The reference checksums are made from LF files.  On Windows, Git can check the
+    same records out with CRLF, which must not be mistaken for an edited evaluation
+    set.  Only line endings are normalized; every other byte remains protected.
+    """
+    content = path.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(content).hexdigest()[:16]
 
 
 def _load_json(path: pathlib.Path):
