@@ -22,9 +22,10 @@ BOOTSTRAP = """# @title Setup (chạy ô này trước)
 import os, subprocess, sys
 
 REPO = "https://github.com/ddhung04/Day21-Track3-Finetuning-Lab_2A202601166_DaoDuyHung.git"
-if not os.path.exists("Day21-Track3-Finetuning-Lab"):
+REPO_DIR = "Day21-Track3-Finetuning-Lab_2A202601166_DaoDuyHung"
+if not os.path.exists(REPO_DIR):
     subprocess.run(["git", "clone", "-q", REPO], check=True)
-os.chdir("Day21-Track3-Finetuning-Lab")
+os.chdir(REPO_DIR)
 sys.path.insert(0, "src")
 
 # Install from requirements.txt, NOT a copied list. The copied list is how the
