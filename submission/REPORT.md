@@ -1,125 +1,76 @@
-# Lab 21 — Evaluation Report
+# Lab 21 — Evaluation Report (tạm thời)
 
-**Họ tên**: <điền>  **MSSV**: <điền>  **Ngày**: <điền>
-**Tier**: `<CPU|LAPTOP|T4|BIGGPU>`  **Base model**: `<model id>`  **GPU thực tế**: `<T4 16GB / ...>`
+**Họ tên**: Dao Duy Hung
+**MSSV**: 2A202601166
+**Ngày**: 2026-08-21
+**Tier**: `CPU`
+**Base model**: `Qwen/Qwen3.5-0.8B`
+**GPU thực tế**: Không có GPU
 
-> Mọi con số dưới đây phải khớp với file trong `results/`. Grader kiểm tra chéo.
-
----
+> Báo cáo này chỉ ghi các kết quả đã đo được trên đường CPU. NB2–NB5 chưa chạy vì môi trường hiện tại không có PyTorch/GPU; không có số liệu baseline, LoRA hay verdict để báo cáo trung thực.
 
 ## 1. Setup
 
-| | |
+| Hạng mục | Kết quả |
 |---|---|
-| Dataset | `<tên + số mẫu>` (mặc định: 250 ticket CSKH → JSON triage) |
-| Train / val | `<n>` / `<n>` (seed 42) |
-| `max_length` | `<n>` — p95 đo được là `<n>` *(results/token_stats.json)* |
-| `MASK_MODE` | `<assistant-only | ...>` |
-| Epochs / max_steps | `<n>` |
+| Dataset | 250 ticket CSKH tổng hợp → JSON triage 4 trường |
+| Train / val | 225 / 25, seed 42 |
+| `max_length` | 512; p95 đo được là 98, `suggested_max_length` là 256 |
+| `MASK_MODE` | `assistant-only` |
+| Epochs / max_steps | 2 epoch được cấu hình; chưa có `max_steps` vì chưa train |
 
-**Template có giữ khối `<think>` không?** `<có/không>` — *(results/template_check.json)*
-Nếu không: bạn đã xử lý thế nào?
-
----
+Template giữ khối `<think>`: có. `template_check.json` kết luận reasoning được giữ lại, nên template không tự xóa trace khi render.
 
 ## 2. Mask proof (NB1)
 
-| | |
+| Hạng mục | Kết quả |
 |---|---|
-| `supervised_fraction` | `<0.xx>` |
-| Câu trả lời nằm trong loss | `<true>` |
-| Câu hỏi KHÔNG nằm trong loss | `<true>` |
+| `supervised_fraction` | 0.3936 |
+| Câu trả lời nằm trong loss | `true` |
+| Câu hỏi không nằm trong loss | `true` |
 
-Dán 3–5 dòng đầu của đoạn được tính loss:
+Đoạn đầu được tính loss:
 
+```text
+{"intent": "doi_tra", "urgency": "trung_binh", "product": "balo laptop", "sentiment": "trung_tinh"}<|im_end|>
 ```
-<paste>
-```
 
----
+Mask `assistant-only` chỉ supervise câu trả lời JSON và token kết thúc; ticket của người dùng không xuất hiện trong span loss. So với mode `everything` (94/94 token, 100%), tỷ lệ 37/94 token (39.36%) là bằng chứng trực tiếp rằng prompt không bị đưa vào loss.
 
-## 3. Ba baseline (NB2 — đo TRƯỚC khi train)
+## 3. Ba baseline (NB2 — đo trước khi train)
 
-| Run | target | regression | format | latency (ms) |
-|---|---|---|---|---|
-| (a) base + naive prompt | | | | |
-| (b) base + optimized prompt | | | | |
-| (c) LoRA fine-tune | | | | |
-
-**(b) có thật sự mạnh hơn (a) không?** `<có/không>` — nếu không, bạn đã cải thiện (b) thế nào?
-Bạn có sửa `OPTIMIZED_PROMPT` không? Nếu có: **làm mạnh lên hay yếu đi**, và vì sao?
-
----
+Chưa chạy được. `baselines_frozen.json` chưa tồn tại vì môi trường hiện tại không cài PyTorch và không có GPU để tải/sinh từ base model. Không suy diễn hay điền số liệu thay thế.
 
 ## 4. Giải phẫu cấu hình sai (NB4)
 
-| Run | vị trí | r | trainable | LR | train loss (NB4) | **target (NB5 §4)** | s | VRAM GB |
-|---|---|---|---|---|---|---|---|---|
-| `correct` | text-linear | 16 | | | | | | |
-| `attn_only` | q,v | *(matched)* | | | | | | |
-| `wrong_lr` | text-linear | 16 | | | | | | |
-| `qlora` | text-linear | 16 | | | | | | |
-
-> Xếp hạng bằng cột **target**, không bằng cột train loss — chấm bằng chỉ số thay thế
-> chính là Lỗi #3. Nếu hai cột cho hai thứ tự khác nhau, nói thẳng điều đó ở 4.1: đó là
-> kết quả đáng giá nhất bạn đo được trong lab này.
-
-Trả lời ba câu (mỗi câu ≥3 câu văn):
-
-**4.1 — `attn_only` có cùng số tham số huấn luyện với `correct`. Trên tập target nó
-thắng, thua, hay hoà? Thứ tự đó có giống thứ tự theo train loss không? Điều đó nói gì về
-*rank* so với *vị trí gắn adapter*?**
-
-**4.2 — `wrong_lr` chỉ khác đúng một con số. Đường loss khác nhau ra sao? Nếu chỉ nhìn
-loss mà không biết LR, bạn sẽ kết luận sai điều gì?**
-
-**4.3 — `qlora` tiết kiệm bao nhiêu VRAM, trả giá bằng gì? Số đo của bạn có ủng hộ khuyến
-nghị "không dùng QLoRA cho dòng model này" không?**
-
----
+Chưa chạy được. Chưa có `adapters/correct/`, `runs.csv` hoặc `autopsy.json`; vì vậy không thể xếp hạng `correct`, `attn_only`, `wrong_lr`, và `qlora` theo target score. Khi có GPU, các run sẽ dùng cùng step budget; `attn_only` phải được tính matched rank để giữ chênh lệch trainable parameters dưới 5%.
 
 ## 5. Phán quyết (NB5)
 
-**Kết quả cổng hồi quy**: `<PASSED | FAILED>`
-`target Δ = <+0.xxx>` · `regression Δ = <+0.xxx>` · `valid_trace_rate = <0.xx>`
+Chưa có phán quyết. Cổng regression chỉ được chạy sau khi baseline (b) đã được đóng băng và adapter `correct` đã được chấm trên đủ tập target/regression. Kết quả hợp lệ có thể là PASSED hoặc FAILED; hiện chưa có dữ liệu để kết luận deploy.
 
-Diễn giải (≥100 từ). Nếu FAILED: **vì sao**, và điều đó nói gì về bài toán của bạn?
-(Một FAILED được phân tích tốt ăn điểm cao hơn một PASSED không giải thích được.)
+## 6. Định tính
 
----
-
-## 6. Định tính — bắt buộc có cả ca THUA
-
-| # | Ticket (rút gọn) | Nhãn đúng | (b) prompt | (c) fine-tune | Nhận xét |
-|---|---|---|---|---|---|
-| 1 | | | | | ✅ FT thắng |
-| 2 | | | | | ✅ FT thắng |
-| 3 | | | | | ❌ **FT thua** |
-| 4 | | | | | ❌ **FT thua** |
-| 5 | | | | | |
-
-Có mẫu chung nào ở các ca FT thua không?
-
----
+Chưa có `qualitative.json`, do chưa có dự đoán fine-tune. Sau khi hoàn tất NB5, báo cáo sẽ chọn ít nhất năm mẫu và bắt buộc nêu ít nhất hai trường hợp fine-tune thua để tránh cherry-picking.
 
 ## 7. Kết luận & điều tôi học được
 
-**Kết luận (≥150 từ).** Bạn có nên deploy bản fine-tune này không, và vì sao? Đâu là đòn
-bẩy thật sự trong lab này — vị trí adapter, learning rate, chất lượng dữ liệu, hay mask?
+Kết quả hiện có xác nhận nền tảng dữ liệu của pipeline hoạt động đúng trước khi đầu tư thời gian GPU. Mask `assistant-only` supervise 39.36% token, chứa JSON mục tiêu và loại phần ticket ra khỏi loss; đây là điều kiện cần để mô hình không học lặp lại prompt. Chat template cũng giữ `<think>`, nên nếu dataset sau này có reasoning trace thì lựa chọn mask sẽ có ý nghĩa thực nghiệm thay vì bị template âm thầm xóa. Độ dài p95 chỉ là 98 token, trong khi tier CPU dùng `max_length=512`; khoảng cách này cần được ghi nhận như một trade-off cấu hình, không che giấu bằng cách sửa số đo.
 
-**Ba điều tôi học được** (cụ thể, không generic):
-1.
-2.
-3.
+Tuy nhiên, chưa thể suy ra LoRA có đáng deploy hay không. Điều đó cần baseline optimized prompt được đo trước train, adapter được huấn luyện, và regression gate được chấm trên tập eval chưa thay đổi. Khi chưa có các phép đo này, một tuyên bố rằng fine-tune thắng hay thua đều không có cơ sở. Bước tiếp theo là chạy cùng một pipeline NB1–NB5 trên Colab T4, để `EVAL_LIMIT` trống, lưu đầy đủ artefact rồi cập nhật báo cáo bằng các số liệu thực tế.
 
-**Nếu có thêm 2 giờ nữa, tôi sẽ thử:**
+Ba điều tôi học được:
 
----
+1. Mask phải được chứng minh bằng span token có thể đọc được, không chỉ tin vào một cờ thư viện.
+2. Prompt mạnh phải được đóng băng trước khi train; so với baseline yếu là một phép so sánh không trung thực.
+3. Train loss không thay thế target score; chỉ đánh giá trên task và regression gate mới hỗ trợ quyết định deploy.
+
+Nếu có thêm thời gian, tôi sẽ chạy full pipeline trên T4, so sánh bốn cấu hình bằng target score, rồi cập nhật phần định tính bằng cả ca thắng và ca thua.
 
 ## Phụ lục — thưởng đã làm
 
 - [ ] B1 NB6 merge + hot-swap
-- [ ] B2 dataset miền riêng (`data/CUSTOM_DATASET.md`)
-- [ ] B3 reasoning-trace collapse (hai `MASK_MODE`, kèm `valid_trace_rate`)
+- [ ] B2 dataset miền riêng
+- [ ] B3 reasoning-trace collapse
 - [ ] B4 quét rank có kiểm soát
-- [ ] B5 HuggingFace Hub — link:
+- [ ] B5 HuggingFace Hub
